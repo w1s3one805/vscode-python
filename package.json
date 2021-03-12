@@ -177,7 +177,11 @@
             {
                 "command": "python.execInTerminal-icon",
                 "title": "%python.command.python.execInTerminal.title%",
-                "category": "Python"
+                "category": "Python",
+                "icon": {
+                    "light": "resources/light/run-file.svg",
+                    "dark": "resources/dark/run-file.svg"
+                }
             },
             {
                 "command": "python.setInterpreter",
@@ -1647,6 +1651,11 @@
                     "description": "Path to isort script, default using inner version",
                     "default": "",
                     "scope": "resource"
+                },
+                "python.tensorBoard.logDirectory": {
+                    "type": "string",
+                    "description": "Set this setting to your preferred TensorBoard log directory to skip log directory prompt when starting TensorBoard.",
+                    "scope": "application"
                 },
                 "python.terminal.activateEnvironment": {
                     "type": "boolean",
