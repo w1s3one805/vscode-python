@@ -1,6 +1,6 @@
 # Changelog
 
-## 2021.5.0-rc (6 May 2021)
+## 2021.5.0 (10 May 2021)
 
 ### Enhancements
 
