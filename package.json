@@ -2,7 +2,7 @@
     "name": "python",
     "displayName": "Python",
     "description": "IntelliSense (Pylance), Linting, Debugging (multi-threaded, remote), Jupyter Notebooks, code formatting, refactoring, unit tests, and more.",
-    "version": "2021.8.2",
+    "version": "2021.8.3",
     "featureFlags": {
         "usingNewInterpreterStorage": true
     },
@@ -2265,7 +2265,7 @@
         "untildify": "^3.0.2",
         "vscode-debugadapter": "^1.28.0",
         "vscode-debugprotocol": "^1.28.0",
-        "vscode-extension-telemetry": "0.2.8",
+        "vscode-extension-telemetry": "0.2.9",
         "vscode-jsonrpc": "6.0.0",
         "vscode-languageclient": "7.0.0",
         "vscode-languageserver": "7.0.0",
@@ -2437,7 +2437,7 @@
         "url-loader": "^1.1.2",
         "uuid": "^3.3.2",
         "vinyl-fs": "^3.0.3",
-        "vsce": "^1.59.0",
+        "vsce": "^1.96.1",
         "vscode-debugadapter-testsupport": "^1.27.0",
         "webpack": "^4.33.0",
         "webpack-bundle-analyzer": "^3.6.0",
