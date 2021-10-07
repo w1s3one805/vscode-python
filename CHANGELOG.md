@@ -1,6 +1,6 @@
 # Changelog
 
-## 2021.10.0 (6 October 2021)
+## 2021.10.0 (7 October 2021)
 
 ### Enhancements
 
