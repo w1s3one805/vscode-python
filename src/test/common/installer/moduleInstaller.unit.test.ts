@@ -234,6 +234,9 @@ suite('Module Installer', () => {
 
                             const condaService = TypeMoq.Mock.ofType<ICondaService>();
                             condaService.setup((c) => c.getCondaFile()).returns(() => Promise.resolve(condaExecutable));
+                            condaService
+                                .setup((c) => c.getCondaFile(true))
+                                .returns(() => Promise.resolve(condaExecutable));
 
                             const condaLocatorService = TypeMoq.Mock.ofType<IComponentAdapter>();
                             serviceContainer
@@ -359,10 +362,14 @@ suite('Module Installer', () => {
                                                     const expectedArgs = ['install'];
                                                     if (condaEnvInfo && condaEnvInfo.name) {
                                                         expectedArgs.push('--name');
-                                                        expectedArgs.push(condaEnvInfo.name.toCommandArgument());
+                                                        expectedArgs.push(
+                                                            condaEnvInfo.name.toCommandArgumentForPythonExt(),
+                                                        );
                                                     } else if (condaEnvInfo && condaEnvInfo.path) {
                                                         expectedArgs.push('--prefix');
-                                                        expectedArgs.push(condaEnvInfo.path.fileToCommandArgument());
+                                                        expectedArgs.push(
+                                                            condaEnvInfo.path.fileToCommandArgumentForPythonExt(),
+                                                        );
                                                     }
                                                     expectedArgs.push('"pylint<2.0.0"');
                                                     expectedArgs.push('-y');
@@ -402,10 +409,14 @@ suite('Module Installer', () => {
                                                     const expectedArgs = ['install'];
                                                     if (condaEnvInfo && condaEnvInfo.name) {
                                                         expectedArgs.push('--name');
-                                                        expectedArgs.push(condaEnvInfo.name.toCommandArgument());
+                                                        expectedArgs.push(
+                                                            condaEnvInfo.name.toCommandArgumentForPythonExt(),
+                                                        );
                                                     } else if (condaEnvInfo && condaEnvInfo.path) {
                                                         expectedArgs.push('--prefix');
-                                                        expectedArgs.push(condaEnvInfo.path.fileToCommandArgument());
+                                                        expectedArgs.push(
+                                                            condaEnvInfo.path.fileToCommandArgumentForPythonExt(),
+                                                        );
                                                     }
                                                     expectedArgs.push('pylint');
                                                     expectedArgs.push('-y');
@@ -661,10 +672,12 @@ suite('Module Installer', () => {
                                             }
                                             if (condaEnvInfo && condaEnvInfo.name) {
                                                 expectedArgs.push('--name');
-                                                expectedArgs.push(condaEnvInfo.name.toCommandArgument());
+                                                expectedArgs.push(condaEnvInfo.name.toCommandArgumentForPythonExt());
                                             } else if (condaEnvInfo && condaEnvInfo.path) {
                                                 expectedArgs.push('--prefix');
-                                                expectedArgs.push(condaEnvInfo.path.fileToCommandArgument());
+                                                expectedArgs.push(
+                                                    condaEnvInfo.path.fileToCommandArgumentForPythonExt(),
+                                                );
                                             }
                                             expectedArgs.push(moduleName);
                                             expectedArgs.push('-y');

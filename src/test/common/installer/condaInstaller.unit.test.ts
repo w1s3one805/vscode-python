@@ -99,7 +99,7 @@ suite('Common - Conda Installer', () => {
 
         when(configService.getSettings(uri)).thenReturn(instance(settings));
         when(settings.pythonPath).thenReturn(pythonPath);
-        when(condaService.getCondaFile()).thenResolve(condaPath);
+        when(condaService.getCondaFile(true)).thenResolve(condaPath);
         when(condaLocatorService.getCondaEnvironment(pythonPath)).thenResolve(condaEnv);
 
         const execInfo = await installer.getExecutionInfo('abc', uri);
@@ -122,13 +122,13 @@ suite('Common - Conda Installer', () => {
 
         when(configService.getSettings(uri)).thenReturn(instance(settings));
         when(settings.pythonPath).thenReturn(pythonPath);
-        when(condaService.getCondaFile()).thenResolve(condaPath);
+        when(condaService.getCondaFile(true)).thenResolve(condaPath);
         when(condaLocatorService.getCondaEnvironment(pythonPath)).thenResolve(condaEnv);
 
         const execInfo = await installer.getExecutionInfo('abc', uri);
 
         assert.deepEqual(execInfo, {
-            args: ['install', '--prefix', condaEnv.path.fileToCommandArgument(), 'abc', '-y'],
+            args: ['install', '--prefix', condaEnv.path.fileToCommandArgumentForPythonExt(), 'abc', '-y'],
             execPath: condaPath,
             useShell: true,
         });

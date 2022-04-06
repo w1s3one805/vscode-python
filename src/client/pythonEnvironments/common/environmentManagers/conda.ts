@@ -10,6 +10,7 @@ import {
     readFile,
     shellExecute,
     onDidChangePythonSetting,
+    exec,
 } from '../externalDependencies';
 
 import { PythonVersion, UNKNOWN_PYTHON_VERSION } from '../../base/info';
@@ -241,13 +242,21 @@ export class Conda {
      */
     private static condaPromise: Promise<Conda | undefined> | undefined;
 
+    private condaInfoCached: Promise<CondaInfo> | undefined;
+
+    /**
+     * Carries path to conda binary to be used for shell execution.
+     */
+    public readonly shellCommand: string;
+
     /**
      * Creates a Conda service corresponding to the corresponding "conda" command.
      *
      * @param command - Command used to spawn conda. This has the same meaning as the
      * first argument of spawn() - i.e. it can be a full path, or just a binary name.
      */
-    constructor(readonly command: string) {
+    constructor(readonly command: string, shellCommand?: string) {
+        this.shellCommand = shellCommand ?? command;
         onDidChangePythonSetting(CONDAPATH_SETTING_KEY, () => {
             Conda.condaPromise = undefined;
         });
@@ -377,7 +386,7 @@ export class Conda {
                         if (condaBatFile) {
                             const condaBat = new Conda(condaBatFile);
                             await condaBat.getInfo();
-                            conda = condaBat;
+                            conda = new Conda(condaPath, condaBatFile);
                         }
                     } catch (ex) {
                         traceVerbose('Failed to spawn conda bat file', condaBatFile, ex);
@@ -402,19 +411,20 @@ export class Conda {
      * Retrieves global information about this conda.
      * Corresponds to "conda info --json".
      */
-    public async getInfo(): Promise<CondaInfo> {
-        return this.getInfoCached(this.command);
+    public async getInfo(useCache?: boolean): Promise<CondaInfo> {
+        if (!useCache || !this.condaInfoCached) {
+            this.condaInfoCached = this.getInfoImpl(this.command);
+        }
+        return this.condaInfoCached;
     }
 
     /**
-     * Cache result for this particular command.
+     * Temporarily cache result for this particular command.
      */
     @cache(30_000, true, 10_000)
     // eslint-disable-next-line class-methods-use-this
-    private async getInfoCached(command: string): Promise<CondaInfo> {
-        const quoted = [command.toCommandArgument(), 'info', '--json'].join(' ');
-        // Execute in a shell as `conda` on windows refers to `conda.bat`, which requires a shell to work.
-        const result = await shellExecute(quoted, { timeout: CONDA_GENERAL_TIMEOUT });
+    private async getInfoImpl(command: string): Promise<CondaInfo> {
+        const result = await exec(command, ['info', '--json'], { timeout: CONDA_GENERAL_TIMEOUT });
         traceVerbose(`conda info --json: ${result.stdout}`);
         return JSON.parse(result.stdout);
     }
@@ -424,8 +434,8 @@ export class Conda {
      * Corresponds to "conda env list --json", but also computes environment names.
      */
     @cache(30_000, true, 10_000)
-    public async getEnvList(): Promise<CondaEnvInfo[]> {
-        const info = await this.getInfo();
+    public async getEnvList(useCache?: boolean): Promise<CondaEnvInfo[]> {
+        const info = await this.getInfo(useCache);
         const { envs } = info;
         if (envs === undefined) {
             return [];
@@ -491,7 +501,7 @@ export class Conda {
         return undefined;
     }
 
-    public async getRunPythonArgs(env: CondaEnvInfo): Promise<string[] | undefined> {
+    public async getRunPythonArgs(env: CondaEnvInfo, forShellExecution?: boolean): Promise<string[] | undefined> {
         const condaVersion = await this.getCondaVersion();
         if (condaVersion && lt(condaVersion, CONDA_RUN_VERSION)) {
             return undefined;
@@ -502,7 +512,15 @@ export class Conda {
         } else {
             args.push('-p', env.prefix);
         }
-        return [this.command, 'run', ...args, '--no-capture-output', '--live-stream', 'python', OUTPUT_MARKER_SCRIPT];
+        return [
+            forShellExecution ? this.shellCommand : this.command,
+            'run',
+            ...args,
+            '--no-capture-output',
+            '--live-stream',
+            'python',
+            OUTPUT_MARKER_SCRIPT,
+        ];
     }
 
     /**
@@ -510,14 +528,12 @@ export class Conda {
      */
     @cache(-1, true)
     public async getCondaVersion(): Promise<SemVer | undefined> {
-        const info = await this.getInfo().catch<CondaInfo | undefined>(() => undefined);
+        const info = await this.getInfo(true).catch<CondaInfo | undefined>(() => undefined);
         let versionString: string | undefined;
         if (info && info.conda_version) {
             versionString = info.conda_version;
         } else {
-            const quoted = `${this.command.toCommandArgument()} --version`;
-            // Execute in a shell as `conda` on windows refers to `conda.bat`, which requires a shell to work.
-            const stdOut = await shellExecute(quoted, { timeout: CONDA_GENERAL_TIMEOUT })
+            const stdOut = await exec(this.command, ['--version'], { timeout: CONDA_GENERAL_TIMEOUT })
                 .then((result) => result.stdout.trim())
                 .catch<string | undefined>(() => undefined);
 
