@@ -297,6 +297,7 @@ if __name__ == "__main__":
         print(f"Error: Could not connect to runTestIdsPort: {e}")
         print("Error: Could not connect to runTestIdsPort")
 
+    print("testIds obtained from buffer: ", test_ids_from_buffer)
     PORT, UUID = parse_execution_cli_args(argv[:index])
     if test_ids_from_buffer:
         # Perform test execution.
