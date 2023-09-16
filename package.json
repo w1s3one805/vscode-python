@@ -20,6 +20,7 @@
     "enabledApiProposals": [
         "contribEditorContentMenu",
         "quickPickSortByLabel",
+        "envShellEvent",
         "testObserver",
         "quickPickItemTooltip",
         "saveEditor"
