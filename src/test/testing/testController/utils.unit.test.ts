@@ -14,7 +14,7 @@ import {
 
 const bufString = (s: string) => {
     // chunk it to make sure processing is handled correctly
-    let chunks: Buffer[] = [];
+    const chunks: Buffer[] = [];
     for (let i = 0; i < s.length; ) {
         const next = i + Math.floor(Math.random() * 5);
         chunks.push(Buffer.from(s.slice(i, next)));

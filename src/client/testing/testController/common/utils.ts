@@ -142,7 +142,6 @@ export class ConcatBuffer {
     }
 }
 
-
 export function extractJsonPayload(rawData: ConcatBuffer, uuids: Array<string>): ExtractOutput {
     /**
      * Extracts JSON-RPC payload from the provided raw data.
