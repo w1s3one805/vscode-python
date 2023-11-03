@@ -29,19 +29,19 @@ export function fixLogLinesNoTrailing(content: string): string {
     return `${lines.join('\r\n')}`;
 }
 export interface IJSONRPCData {
-    extractedJSON: string;
-    remainingRawData: string;
+    extractedJSON: ConcatBuffer;
+    remainingRawData: ConcatBuffer;
 }
 
 export interface ParsedRPCHeadersAndData {
     headers: Map<string, string>;
-    remainingRawData: string;
+    remainingRawData: ConcatBuffer;
 }
 
 export interface ExtractOutput {
     uuid: string | undefined;
     cleanedJsonData: string | undefined;
-    remainingRawData: string;
+    remainingRawData: ConcatBuffer;
 }
 
 export const JSONRPC_UUID_HEADER = 'Request-uuid';
@@ -57,7 +57,93 @@ export function createTestingDeferred(): Deferred<void> {
     return createDeferred<void>();
 }
 
-export function extractJsonPayload(rawData: string, uuids: Array<string>): ExtractOutput {
+/** A wrapper around buffers that avoids having to concatenate them to do common operations */
+export class ConcatBuffer {
+    constructor(private readonly buffers: Buffer[] = []) {}
+
+    /** Gets whether the buffers are empty */
+    public get isEmpty(): boolean {
+        return this.buffers.length === 0 || this.length === 0;
+    }
+
+    /** Gets the number of bytes in the buffer */
+    public get length(): number {
+        let len = 0;
+        for (const buffer of this.buffers) {
+            len += buffer.length;
+        }
+        return len;
+    }
+
+    /** Clears all data from the buffer */
+    public clear(): void {
+        this.buffers.length = 0;
+    }
+
+    /** Gets the index of the byte in tyhe buffers */
+    public indexOf(byte: number, offset = 0): number {
+        let len = 0;
+        for (const buffer of this.buffers) {
+            const index = buffer.indexOf(byte, Math.max(0, offset - len));
+            if (index >= 0) {
+                return len + index;
+            }
+
+            len += buffer.length;
+        }
+
+        return -1;
+    }
+
+    /** Adds a new buffer to the concatenation */
+    public push(buffer: Buffer): void {
+        if (buffer.length > 0) {
+            this.buffers.push(buffer);
+        }
+    }
+
+    /** Converts the buffer to a string */
+    public toString(): string {
+        let result = '';
+        const decoder = new TextDecoder();
+        for (let i = 0; i < this.buffers.length; i += 1) {
+            result += decoder.decode(this.buffers[i], { stream: i < this.buffers.length - 1 });
+        }
+
+        return result;
+    }
+
+    /** Gets a subarray of the buffer. Note: may retain the original buffers' memory */
+    public subarray(start: number, end = Infinity): ConcatBuffer {
+        const result: Buffer[] = [];
+        let offset = 0;
+        for (const buffer of this.buffers) {
+            if (offset >= end) {
+                break;
+            }
+
+            const bufferEnd = offset + buffer.length;
+            if (bufferEnd <= start) {
+                offset = bufferEnd;
+                // eslint-disable-next-line no-continue
+                continue;
+            }
+
+            const sliceStart = Math.max(0, start - offset);
+            const sliceEnd = Math.min(buffer.length, end - offset);
+            const slice = buffer.subarray(sliceStart, sliceEnd);
+            if (slice.length) {
+                result.push(slice);
+            }
+            offset = bufferEnd;
+        }
+
+        return new ConcatBuffer(result);
+    }
+}
+
+
+export function extractJsonPayload(rawData: ConcatBuffer, uuids: Array<string>): ExtractOutput {
     /**
      * Extracts JSON-RPC payload from the provided raw data.
      * @param {string} rawData - The raw string data from which the JSON payload will be extracted.
@@ -82,7 +168,7 @@ export function extractJsonPayload(rawData: string, uuids: Array<string>): Extra
     if (cleanedJsonData.length === Number(payloadLength)) {
         // call to process this data
         // remove this data from the buffer
-        return { uuid, cleanedJsonData, remainingRawData };
+        return { uuid, cleanedJsonData: cleanedJsonData.toString(), remainingRawData };
     }
     // wait for the remaining
     return { uuid: undefined, cleanedJsonData: undefined, remainingRawData: rawData };
@@ -100,7 +186,9 @@ export function checkUuid(uuid: string | undefined, uuids: Array<string>): strin
     return uuid;
 }
 
-export function parseJsonRPCHeadersAndData(rawData: string): ParsedRPCHeadersAndData {
+const LF = '\n'.charCodeAt(0);
+
+export function parseJsonRPCHeadersAndData(rawData: ConcatBuffer): ParsedRPCHeadersAndData {
     /**
      * Parses the provided raw data to extract JSON-RPC specific headers and remaining data.
      *
@@ -114,16 +202,18 @@ export function parseJsonRPCHeadersAndData(rawData: string): ParsedRPCHeadersAnd
      * @returns {ParsedRPCHeadersAndData} An object containing the parsed headers as a map and the
      * remaining raw data after the headers.
      */
-    const lines = rawData.split('\n');
-    let remainingRawData = '';
+    let last = 0;
+    let remainingRawData: ConcatBuffer | undefined;
+
     const headerMap = new Map<string, string>();
-    for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (line === '') {
-            remainingRawData = lines.slice(i + 1).join('\n');
+    for (let i = rawData.indexOf(LF); i !== -1; i = rawData.indexOf(LF, last)) {
+        const line = rawData.subarray(last, i);
+        last = i + 1;
+        if (line.isEmpty) {
+            remainingRawData = rawData.subarray(i + 1);
             break;
         }
-        const [key, value] = line.split(':');
+        const [key, value] = line.toString().split(':', 2);
         if (value && value.trim()) {
             if ([JSONRPC_UUID_HEADER, JSONRPC_CONTENT_LENGTH_HEADER, JSONRPC_CONTENT_TYPE_HEADER].includes(key)) {
                 headerMap.set(key.trim(), value.trim());
@@ -133,11 +223,11 @@ export function parseJsonRPCHeadersAndData(rawData: string): ParsedRPCHeadersAnd
 
     return {
         headers: headerMap,
-        remainingRawData,
+        remainingRawData: remainingRawData || new ConcatBuffer(),
     };
 }
 
-export function ExtractJsonRPCData(payloadLength: string | undefined, rawData: string): IJSONRPCData {
+export function ExtractJsonRPCData(payloadLength: string | undefined, rawData: ConcatBuffer): IJSONRPCData {
     /**
      * Extracts JSON-RPC content based on provided headers and raw data.
      *
@@ -152,8 +242,8 @@ export function ExtractJsonRPCData(payloadLength: string | undefined, rawData: s
      * @returns {IJSONRPCContent} An object containing the extracted JSON content and any remaining raw data.
      */
     const length = parseInt(payloadLength ?? '0', 10);
-    const data = rawData.slice(0, length);
-    const remainingRawData = rawData.slice(length);
+    const data = rawData.subarray(0, length);
+    const remainingRawData = rawData.subarray(length);
     return {
         extractedJSON: data,
         remainingRawData,

@@ -17,6 +17,7 @@ import { DataReceivedEvent, ITestServer, TestCommandOptions } from './types';
 import { ITestDebugLauncher, LaunchOptions } from '../../common/types';
 import { UNITTEST_PROVIDER } from '../../common/constants';
 import {
+    ConcatBuffer,
     MESSAGE_ON_TESTING_OUTPUT_MOVE,
     createDiscoveryErrorPayload,
     createEOTPayload,
@@ -42,11 +43,11 @@ export class PythonTestServer implements ITestServer, Disposable {
 
     constructor(private executionFactory: IPythonExecutionFactory, private debugLauncher: ITestDebugLauncher) {
         this.server = net.createServer((socket: net.Socket) => {
-            let buffer: Buffer = Buffer.alloc(0); // Buffer to accumulate received data
+            let buffer = new ConcatBuffer(); // Buffer to accumulate received data
             socket.on('data', (data: Buffer) => {
                 traceVerbose('data received from python server: ', data.toString());
-                buffer = Buffer.concat([buffer, data]); // get the new data and add it to the buffer
-                while (buffer.length > 0) {
+                buffer.push(data); // get the new data and add it to the buffer
+                while (!buffer.isEmpty) {
                     try {
                         // try to resolve data, returned unresolved data
                         const remainingBuffer = this._resolveData(buffer);
@@ -58,7 +59,7 @@ export class PythonTestServer implements ITestServer, Disposable {
                         buffer = remainingBuffer;
                     } catch (ex) {
                         traceError(`Error reading data from buffer: ${ex} observed.`);
-                        buffer = Buffer.alloc(0);
+                        buffer.clear();
                         this._onDataReceived.fire({ uuid: '', data: '' });
                     }
                 }
@@ -85,9 +86,9 @@ export class PythonTestServer implements ITestServer, Disposable {
 
     savedBuffer = '';
 
-    public _resolveData(buffer: Buffer): Buffer {
+    public _resolveData(buffer: ConcatBuffer): ConcatBuffer {
         try {
-            const extractedJsonPayload = extractJsonPayload(buffer.toString(), this.uuids);
+            const extractedJsonPayload = extractJsonPayload(buffer, this.uuids);
             // what payload is so small it doesn't include the whole UUID think got this
             if (extractedJsonPayload.uuid !== undefined && extractedJsonPayload.cleanedJsonData !== undefined) {
                 // if a full json was found in the buffer, fire the data received event then keep cycling with the remaining raw data.
@@ -98,10 +99,10 @@ export class PythonTestServer implements ITestServer, Disposable {
                     `extract json payload incomplete, uuid= ${extractedJsonPayload.uuid} and cleanedJsonData= ${extractedJsonPayload.cleanedJsonData}`,
                 );
             }
-            buffer = Buffer.from(extractedJsonPayload.remainingRawData);
+            buffer = extractedJsonPayload.remainingRawData;
             if (buffer.length === 0) {
                 // if the buffer is empty, then there is no more data to process so buffer should be cleared.
-                buffer = Buffer.alloc(0);
+                buffer.clear();
             }
         } catch (ex) {
             traceError(`Error attempting to resolve data: ${ex}`);
