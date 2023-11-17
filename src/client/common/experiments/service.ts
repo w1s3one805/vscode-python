@@ -5,7 +5,7 @@
 
 import { inject, injectable } from 'inversify';
 import { l10n } from 'vscode';
-import { getExperimentationService, IExperimentationService } from 'vscode-tas-client';
+import { IExperimentationService } from 'vscode-tas-client';
 import { traceLog } from '../../logging';
 import { sendTelemetryEvent } from '../../telemetry';
 import { EventName } from '../../telemetry/constants';
@@ -13,6 +13,7 @@ import { IApplicationEnvironment, IWorkspaceService } from '../application/types
 import { PVSC_EXTENSION_ID } from '../constants';
 import { IExperimentService, IPersistentStateFactory } from '../types';
 import { ExperimentationTelemetry } from './telemetry';
+import { getExperimentationService } from './tasClient';
 
 const EXP_MEMENTO_KEY = 'VSCode.ABExp.FeatureData';
 const EXP_CONFIG_ID = 'vscode';
