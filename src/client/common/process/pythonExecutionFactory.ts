@@ -109,9 +109,12 @@ export class PythonExecutionFactory implements IPythonExecutionFactory {
                 pythonPath: options.interpreter ? options.interpreter.path : undefined,
             });
         }
-        const pythonPath = options.interpreter
+        let pythonPath = options.interpreter
             ? options.interpreter.path
-            : this.configService.getSettings(options.resource).pythonPath;
+            : this.interpreterPathExpHelper.get(options.resource);
+        if (!pythonPath) {
+            pythonPath = this.configService.getSettings(options.resource).pythonPath;
+        }
         const processService: IProcessService = new ProcessService({ ...envVars });
         processService.on('exec', this.logger.logProcess.bind(this.logger));
         this.disposables.push(processService);
