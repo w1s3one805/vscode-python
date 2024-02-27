@@ -147,7 +147,7 @@ function createNonWorkspaceLocators(ext: ExtensionState): ILocator<BasicEnvInfo>
     if (getOSType() === OSType.Windows) {
         locators.push(
             // Windows specific locators go here.
-            new WindowsRegistryLocator(),
+            // new WindowsRegistryLocator(),
             new MicrosoftStoreLocator(),
             new WindowsPathEnvVarLocator(),
         );

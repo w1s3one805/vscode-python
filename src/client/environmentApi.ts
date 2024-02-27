@@ -141,7 +141,13 @@ export function buildEnvironmentApi(
             }
             if (e.old) {
                 if (e.new) {
-                    traceVerbose('Python API env change detected', env.id, 'update');
+                    console.log(
+                        'Python API env change detected',
+                        env.id,
+                        'update',
+                        JSON.stringify(e.old),
+                        JSON.stringify(e.new),
+                    );
                     onEnvironmentsChanged.fire({ type: 'update', env: convertEnvInfoAndGetReference(e.new) });
                     reportInterpretersChanged([
                         {
@@ -150,7 +156,7 @@ export function buildEnvironmentApi(
                         },
                     ]);
                 } else {
-                    traceVerbose('Python API env change detected', env.id, 'remove');
+                    console.log('Python API env change detected', env.id, 'remove', JSON.stringify(e.old));
                     onEnvironmentsChanged.fire({ type: 'remove', env: convertEnvInfoAndGetReference(e.old) });
                     reportInterpretersChanged([
                         {
@@ -160,7 +166,7 @@ export function buildEnvironmentApi(
                     ]);
                 }
             } else if (e.new) {
-                traceVerbose('Python API env change detected', env.id, 'add');
+                console.log('Python API env change detected', env.id, 'add', JSON.stringify(e.new));
                 onEnvironmentsChanged.fire({ type: 'add', env: convertEnvInfoAndGetReference(e.new) });
                 reportInterpretersChanged([
                     {

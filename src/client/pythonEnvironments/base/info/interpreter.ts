@@ -89,19 +89,24 @@ export async function getInterpreterInfo(
     // See these two bugs:
     // https://github.com/microsoft/vscode-python/issues/7569
     // https://github.com/microsoft/vscode-python/issues/7760
-    const result = await shellExecute(quoted, { timeout: timeout ?? standardTimeout });
-    if (result.stderr) {
-        traceError(
-            `Stderr when executing script with >> ${quoted} << stderr: ${result.stderr}, still attempting to parse output`,
-        );
-    }
-    let json: InterpreterInfoJson;
     try {
-        json = parse(result.stdout);
+        const result = await shellExecute(quoted, { timeout: timeout ?? standardTimeout });
+        if (result.stderr) {
+            traceError(
+                `Stderr when executing script with >> ${quoted} << stderr: ${result.stderr}, still attempting to parse output`,
+            );
+        }
+        let json: InterpreterInfoJson;
+        try {
+            json = parse(result.stdout);
+        } catch (ex) {
+            traceError(`Failed to parse interpreter information for >> ${quoted} << with ${ex}`);
+            return undefined;
+        }
+        traceVerbose(`Found interpreter for >> ${quoted} <<: ${JSON.stringify(json)}`);
+        return extractInterpreterInfo(python.pythonExecutable, json);
     } catch (ex) {
-        traceError(`Failed to parse interpreter information for >> ${quoted} << with ${ex}`);
-        return undefined;
+        traceError(quoted, ex);
+        throw ex;
     }
-    traceVerbose(`Found interpreter for >> ${quoted} <<: ${JSON.stringify(json)}`);
-    return extractInterpreterInfo(python.pythonExecutable, json);
 }
