@@ -29,6 +29,9 @@ function parseStack(ex: Error) {
 @injectable()
 export class Extensions implements IExtensions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private _cachedExtensions?: readonly Extension<any>[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public get all(): readonly Extension<any>[] {
         return extensions.all;
     }
@@ -39,6 +42,16 @@ export class Extensions implements IExtensions {
 
     public getExtension(extensionId: string): Extension<unknown> | undefined {
         return extensions.getExtension(extensionId);
+    }
+
+    private get cachedExtensions() {
+        if (!this._cachedExtensions) {
+            this._cachedExtensions = extensions.all;
+            extensions.onDidChange(() => {
+                this._cachedExtensions = extensions.all;
+            });
+        }
+        return this._cachedExtensions;
     }
 
     /**
@@ -70,7 +83,7 @@ export class Extensions implements IExtensions {
                     }
                 });
                 for (const frame of frames) {
-                    const matchingExt = extensions.all.find(
+                    const matchingExt = this.cachedExtensions.find(
                         (ext) =>
                             ext.id !== PVSC_EXTENSION_ID &&
                             (frame.toLowerCase().startsWith(ext.extensionUri.fsPath.toLowerCase()) ||
