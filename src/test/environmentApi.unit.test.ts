@@ -95,7 +95,7 @@ suite('Python Environment API', () => {
         discoverAPI.setup((d) => d.onProgress).returns(() => onDidChangeRefreshState.event);
         discoverAPI.setup((d) => d.onChanged).returns(() => onDidChangeEnvironments.event);
 
-        environmentApi = buildEnvironmentApi(discoverAPI.object, serviceContainer.object);
+        environmentApi = buildEnvironmentApi(discoverAPI.object, serviceContainer.object, '');
     });
 
     teardown(() => {
