@@ -344,7 +344,12 @@
             {
                 "category": "Python",
                 "command": "python.startREPL",
-                "title": "%python.command.python.startREPL.title%"
+                "title": "%python.command.python.startTerminalREPL.title%"
+            },
+            {
+                "category": "Python",
+                "command": "python.startNativeREPL",
+                "title": "%python.command.python.startNativeREPL.title%"
             },
             {
                 "category": "Python",
@@ -1328,7 +1333,13 @@
                 {
                     "category": "Python",
                     "command": "python.startREPL",
-                    "title": "%python.command.python.startREPL.title%",
+                    "title": "%python.command.python.startTerminalREPL.title%",
+                    "when": "!virtualWorkspace && shellExecutionSupported"
+                },
+                {
+                    "category": "Python",
+                    "command": "python.startNativeREPL",
+                    "title": "%python.command.python.startNativeREPL.title%",
                     "when": "!virtualWorkspace && shellExecutionSupported"
                 },
                 {
