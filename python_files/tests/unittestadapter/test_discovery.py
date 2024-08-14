@@ -4,7 +4,7 @@
 import os
 import pathlib
 import sys
-from typing import List
+from typing import Any, Dict, List
 
 import pytest
 
@@ -14,7 +14,7 @@ from unittestadapter.pvsc_utils import TestNodeTypeEnum, parse_unittest_args
 script_dir = pathlib.Path(__file__).parent.parent
 sys.path.append(os.fspath(script_dir))
 
-
+from tests.pytestadapter import helpers  # noqa: E402
 from tests.tree_comparison_helper import is_same_tree  # noqa: E402
 
 from . import expected_discovery_test_output  # noqa: E402
@@ -290,3 +290,38 @@ def test_complex_tree() -> None:
         expected_discovery_test_output.complex_tree_expected_output,
         ["id_", "lineno", "name"],
     )
+
+
+def test_simple_django_collect():
+    test_data_path: pathlib.Path = pathlib.Path(__file__).parent / ".data"
+    python_files_path: pathlib.Path = pathlib.Path(__file__).parent.parent.parent
+    discovery_script_path: str = os.fsdecode(python_files_path / "unittestadapter" / "discovery.py")
+    data_path: pathlib.Path = test_data_path / "simple_django"
+    manage_py_path: str = os.fsdecode(pathlib.Path(data_path, "manage.py"))
+
+    actual = helpers.runner_with_cwd_env(
+        [
+            discovery_script_path,
+            "--udiscovery",
+        ],
+        data_path,
+        {"MANAGE_PY_PATH": manage_py_path},
+    )
+
+    assert actual
+    actual_list: List[Dict[str, Any]] = actual
+    assert actual_list is not None
+    if actual_list is not None:
+        actual_item = actual_list.pop(0)
+        assert all(item in actual_item for item in ("status", "cwd"))
+        assert (
+            actual_item.get("status") == "success"
+        ), f"Status is not 'success', error is: {actual_item.get('error')}"
+        assert actual_item.get("cwd") == os.fspath(data_path)
+        assert len(actual_item["tests"]["children"]) == 1
+        assert actual_item["tests"]["children"][0]["children"][0]["id_"] == os.fsdecode(
+            pathlib.PurePath(test_data_path, "simple_django", "polls", "tests.py")
+        )
+        assert (
+            len(actual_item["tests"]["children"][0]["children"][0]["children"][0]["children"]) == 3
+        )
